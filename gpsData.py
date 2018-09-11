@@ -12,6 +12,7 @@ import subprocess
 #setting the constants
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
+ALERTREFRESH=2  # Refresh rate of alerting in seconds
 DBFILE = '/home/chip/rad_txt-iGO-EUR.zip'
 POIFILE = 'SpeedCam.txt'
 WARNINGDISTANCEREF = 0.4 # Ref warning distance in km for low speed (under 60km/h)
@@ -40,8 +41,12 @@ class Alerting(threading.Thread):
   def run(self):
     global currentMode
     while self.running:
-	time.sleep(1)
-    play_mp3("./End.mp3")
+	if currentMode == 2:
+		play_mp3("./Lightbell.mp3")
+	elif currentMode == 3:	
+		play_mp3("./Strongbell.mp3")
+	time.sleep(ALERTREFRESH)
+    play_mp3("./End.mp3") # Only reached when the thread is terminated
 
 class GpsPoller(threading.Thread):
   def __init__(self):
@@ -142,7 +147,7 @@ if __name__ == '__main__':
 				lowlim = (float(radar[5])-45)%360
 				hghlim = (float(radar[5])+45)%360
 				if radar[4] == '0' or (radar[4] == '1' and gpsd.fix.track > lowlim and gpsd.fix.track < hghlim) or radar[4] == '2':
-					if float(radar[3])==0 or (gpsd.fix.speed*3.6)>radar[3]:
+					if (not float(radar[3])==0) and (gpsd.fix.speed*3.6)>radar[3]:
 						print '- WARNING'
 						currentMode=3
 						updateStatus=1
