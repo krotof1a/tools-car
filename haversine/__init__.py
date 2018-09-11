@@ -1,6 +1,6 @@
 from math import radians, cos, sin, asin, sqrt
 
-AVG_EARTH_RADIUS = 6371  # in km
+AVG_EARTH_RADIUS = 6368  # in km for France
 
 
 def haversine(point1, point2, miles=False):
