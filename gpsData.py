@@ -7,6 +7,7 @@ from haversine import haversine
 import time
 import threading
 import zipfile
+import subprocess
 
 #setting the constants
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
@@ -27,15 +28,20 @@ PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refr
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
 
 class Alerting(threading.Thread):
+  def play_mp3(path):
+    subprocess.Popen(['mpg123', '-q', path]).wait()
+
   def __init__(self):
     threading.Thread.__init__(self)
     self.current_value = None
+    play_mp3("./Start.mp3")
     self.running = True #setting the thread running to true
  
   def run(self):
     global currentMode
     while self.running:
 	time.sleep(1)
+    play_mp3("./End.mp3")
 
 class GpsPoller(threading.Thread):
   def __init__(self):
