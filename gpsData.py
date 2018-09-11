@@ -9,11 +9,14 @@ import threading
 import zipfile
 
 #setting the constants
-MAINREFRESH=1
+MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
 DBFILE = '/home/chip/rad_txt-iGO-EUR.zip'
 POIFILE = 'SpeedCam.txt'
-WARNINGDISTANCEREF = 0.4 # Ref warning distance in km under 60km/h
+WARNINGDISTANCEREF = 0.4 # Ref warning distance in km for low speed (under 60km/h)
+WARNINGDISTANCEMULTIPLICATORMEDIUM = 2 # Multiplicator of warning distance for medium speed (under 90km/h)
+WARNINGDISTANCEMULTIPLICATORHIGH   = 3 # Multiplicator of warning distance for high  speed (under 130km/h)
+WARNINGDISTANCEMULTIPLICATOROVER   = 5 # Multiplicator of warning distance for over  speed (above 130km/h)
 POSIMPRECISION = 0.05 # Imprecision in real precise position
 
 #setting the global variables
@@ -22,7 +25,18 @@ poi  = []
 proxyPoi = []
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
+
+class Alerting(threading.Thread):
+  def __init__(self):
+    threading.Thread.__init__(self)
+    self.current_value = None
+    self.running = True #setting the thread running to true
  
+  def run(self):
+    global currentMode
+    while self.running:
+	time.sleep(1)
+
 class GpsPoller(threading.Thread):
   def __init__(self):
     threading.Thread.__init__(self)
@@ -55,7 +69,7 @@ class ProxyPOISelector(threading.Thread):
 					if radarDis <= PROXYDISTANCE:
 						proxyPoi.insert(0,(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis))
 				print 'End proximity radar selection'
-				for i in range(PROXYREFRESH):
+				for i in range(PROXYREFRESH): # Used to wait but not blocking for Thread termination
 					if self.running:
 						time.sleep(1)
 					else:
@@ -66,7 +80,7 @@ class ProxyPOISelector(threading.Thread):
 			time.sleep(1)
 
 if __name__ == '__main__':
-  # Read radar from archive
+  # Read radars list from archive
   zipFile = zipfile.ZipFile(DBFILE, 'r')
   with zipFile.open(POIFILE) as f:
       for line in f:
@@ -77,13 +91,15 @@ if __name__ == '__main__':
   # Create helper's threads
   gpsp = GpsPoller()
   poip = ProxyPOISelector()
+  alert = Alerting()
   # Start everything
   try:
     gpsp.start()
     poip.start()
+    alert.start()
+
     while True:
       os.system('clear')
- 
       print
       print ' GPS reading'
       print '----------------------------------------'
@@ -102,11 +118,11 @@ if __name__ == '__main__':
         if gpsd.fix.speed*3.6 <= 60:
 		WARNINGDISTANCE=WARNINGDISTANCEREF
         elif gpsd.fix.speed*3.6 <= 90:
-		WARNINGDISTANCE=WARNINGDISTANCEREF*2
+		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATORMEDIUM
         elif gpsd.fix.speed*3.6 <= 130:
-		WARNINGDISTANCE=WARNINGDISTANCEREF*3
+		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATORHIGH
         else:
-		WARNINGDISTANCE=WARNINGDISTANCEREF*5
+		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATOROVER
         # Check proximity radars to know if we should warn
 	updateStatus=0
         for counter, radar in enumerate(proxyPoi):
@@ -147,10 +163,12 @@ if __name__ == '__main__':
  
   except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
     print "\nKilling Threads..."
-    gpsp.running = False
-    poip.running = False
+    gpsp.running  = False
+    poip.running  = False
+    alert.running = False
     gpsp.join() # wait for the thread to finish what it's doing
     poip.join()
+    alert.join()
     time.sleep(1)
   print "Done.\nExiting."
 
