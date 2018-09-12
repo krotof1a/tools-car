@@ -26,6 +26,7 @@ WARNINGDISTANCEMULTIPLICATOROVER   = 5 # Multiplicator of warning distance for o
 POSIMPRECISION = 0.05 # Imprecision in real precise position
 
 #setting the global variables
+averageSpeedValue = 0
 gpsd = None 
 poi  = []
 proxyPoi = []
@@ -51,13 +52,19 @@ class Alerting(threading.Thread):
     self.running = True #setting the thread running to true
  
   def run(self):
-    global currentMode
+    global currentMode, averageSpeedValue
     while self.running:
 	if currentMode == 2:
 		self.play_mp3(LIGHTMP3)
+		time.sleep(ALERTREFRESH)
 	elif currentMode == 3:	
 		self.play_mp3(STRONGMP3)
-	time.sleep(ALERTREFRESH)
+		time.sleep(ALERTREFRESH)
+	elif currentMode == 4:
+		play.speach('note Vitesse moyenne '+str(averageSpeedValue))
+		time.sleep(ALERTREFRESH*5)
+	else:	
+		time.sleep(ALERTREFRESH)
     self.play_mp3(ENDMP3) # Only reached when the thread is terminated
 
 class GpsPoller(threading.Thread):
@@ -117,7 +124,6 @@ if __name__ == '__main__':
   alert = Alerting()
   # Start everything
   averageControlProxy = False
-  averageSpeedValue = 0
   averageMeasureNbr = 0
   try:
     gpsp.start()
@@ -173,6 +179,9 @@ if __name__ == '__main__':
 						updateStatus=1
 					if radarDis <= POSIMPRECISION:
 						averageControlProxy = True
+				   else:
+					print '- IN CONTROLLED SECTION'
+					updateStatus=1
 				else:
 					print '- Radar is not in the driving direction'
 			else:
