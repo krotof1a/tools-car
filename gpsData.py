@@ -181,7 +181,7 @@ if __name__ == '__main__':
 			print '- Radar is too far'
 		else:
 		   print '- Radar distance is increasing'
-		   if (radar[2] == '4' and (currentMode=3 or currentMode=2) and averageControlProxy==True):
+		   if (radar[2] == '4' and (currentMode==3 or currentMode==2) and averageControlProxy==True):
 			currentMode=4
 			updateStatus=1
 		# update of radar distance
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 		averageControlProxy = False
 	# calculate average speed
 	if currentMode == 4:
-		averageMeasureNbr = 1
+		averageMeasureNbr += 1
 		averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
       else:
 	currentMode=0
