@@ -116,6 +116,9 @@ if __name__ == '__main__':
   poip = ProxyPOISelector()
   alert = Alerting()
   # Start everything
+  averageControlProxy = False
+  averageSpeedValue = 0
+  averageMeasureNbr = 0
   try:
     gpsp.start()
     poip.start()
@@ -154,11 +157,12 @@ if __name__ == '__main__':
 		radarDis = haversine(localPos,radarPos)
 		if radarDis <= radar[6] + POSIMPRECISION: # Getting closer from the radar
 		   if radarDis <= WARNINGDISTANCE: # We are under warning distance
-			if radar[2] == '1' or radar[2] == '69': # Warn only for RF and RFR
+			if radar[2] == '1' or radar[2] == '4' or radar[2] == '69': # Warn only for RF, RS and RFR
 				print str(radar)
 				lowlim = (float(radar[5])-45)%360
 				hghlim = (float(radar[5])+45)%360
 				if radar[4] == '0' or (radar[4] == '1' and gpsd.fix.track > lowlim and gpsd.fix.track < hghlim) or radar[4] == '2':
+				   if not currentMode==4:
 					if (not float(radar[3])==0) and (gpsd.fix.speed*3.6)>radar[3]:
 						print '- WARNING'
 						currentMode=3
@@ -167,19 +171,31 @@ if __name__ == '__main__':
 						print '- LIGHT WARNING'
 						currentMode=2
 						updateStatus=1
+					if radarDis <= POSIMPRECISION:
+						averageControlProxy = True
 				else:
 					print '- Radar is not in the driving direction'
 			else:
-				print '- Radar is not a RF or RFR  one'
+				print '- Radar is not a RF, RS or RFR  one'
 		   else:
 			print '- Radar is too far'
 		else:
 		   print '- Radar distance is increasing'
+		   if (radar[2] == '4' and (currentMode=3 or currentMode=2) and averageControlProxy==True):
+			currentMode=4
+			updateStatus=1
 		# update of radar distance
 		proxyPoi[counter]=(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis)
 	# update status
 	if updateStatus==0 and currentMode>1:
 		currentMode=1
+		averageSpeedValue = 0
+  		averageMeasureNbr = 0
+		averageControlProxy = False
+	# calculate average speed
+	if currentMode == 4:
+		averageMeasureNbr = 1
+		averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
       else:
 	currentMode=0
       time.sleep(MAINREFRESH)
