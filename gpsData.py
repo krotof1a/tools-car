@@ -15,6 +15,10 @@ PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
 ALERTREFRESH=2  # Refresh rate of alerting in seconds
 DBFILE = '/home/chip/rad_txt-iGO-EUR.zip'
 POIFILE = 'SpeedCam.txt'
+STARTMP3 = '/home/chip/tools-car/Start.mp3'
+ENDMP3   = '/home/chip/tools-car/End.mp3'
+LIGHTMP3 = '/home/chip/tools-car/Lightbell.mp3'
+STRONGMP3= '/home/chip/tools-car/Strongbell.mp3'
 WARNINGDISTANCEREF = 0.4 # Ref warning distance in km for low speed (under 60km/h)
 WARNINGDISTANCEMULTIPLICATORMEDIUM = 2 # Multiplicator of warning distance for medium speed (under 90km/h)
 WARNINGDISTANCEMULTIPLICATORHIGH   = 3 # Multiplicator of warning distance for high  speed (under 130km/h)
@@ -29,24 +33,32 @@ PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refr
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
 
 class Alerting(threading.Thread):
+  @staticmethod
   def play_mp3(path):
     subprocess.Popen(['mpg123', '-q', path]).wait()
+
+  @staticmethod
+  def play_speach(message):
+    tmpFile = '/tmp/gpsData.wav'
+    subprocess.Popen(['pico2wave', '-l', 'fr-FR', '-w', tmpFile, 'info '+message]).wait()
+    subprocess.Popen(['aplay', tmpFile]).wait()
+    os.remove(tmpFile)
 
   def __init__(self):
     threading.Thread.__init__(self)
     self.current_value = None
-    play_mp3("./Start.mp3")
+    self.play_mp3(STARTMP3)
     self.running = True #setting the thread running to true
  
   def run(self):
     global currentMode
     while self.running:
 	if currentMode == 2:
-		play_mp3("./Lightbell.mp3")
+		self.play_mp3(LIGHTMP3)
 	elif currentMode == 3:	
-		play_mp3("./Strongbell.mp3")
+		self.play_mp3(STRONGMP3)
 	time.sleep(ALERTREFRESH)
-    play_mp3("./End.mp3") # Only reached when the thread is terminated
+    self.play_mp3(ENDMP3) # Only reached when the thread is terminated
 
 class GpsPoller(threading.Thread):
   def __init__(self):
