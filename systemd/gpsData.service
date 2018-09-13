@@ -5,7 +5,10 @@ After=multi-user.target gpsd.service
  
 [Service]
 Type=simple
+User=chip
+Group=chip
 ExecStart=/usr/bin/python /home/chip/tools-car/gpsData.py > /dev/zero
+WorkingDirectory=/home/chip/tools-car
 Restart=on-abort
  
 [Install]
