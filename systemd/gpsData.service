@@ -1,7 +1,7 @@
 [Unit]
 Description=GPS based POI warner
-Requires=gpsd.service
-After=multi-user.target gpsd.service
+Requires=gpsd.service updateChipFolder.service
+After=multi-user.target gpsd.service updateChipFolder.service
  
 [Service]
 Type=simple
