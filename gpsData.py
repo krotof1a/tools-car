@@ -13,7 +13,7 @@ import subprocess
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
 ALERTREFRESH=2  # Refresh rate of alerting in seconds
-DBFILE = '/home/chip/rad_txt-iGO-EUR.zip'
+DBFILE = '/home/chip/tools-car/database.zip' # Renamed from rad_txt-iGO-EUR.zip'
 POIFILE = 'SpeedCam.txt'
 STARTMP3 = '/home/chip/tools-car/Start.mp3'
 ENDMP3   = '/home/chip/tools-car/End.mp3'
