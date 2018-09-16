@@ -46,9 +46,11 @@ class Alerting(threading.Thread):
     os.remove(tmpFile)
 
   def __init__(self):
+    global poi
     threading.Thread.__init__(self)
     self.current_value = None
     self.play_mp3(STARTMP3)
+    self.play_speach(str(len(poi))+' radars chargés')
     self.running = True #setting the thread running to true
  
   def run(self):
