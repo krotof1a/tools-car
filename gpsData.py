@@ -34,18 +34,19 @@ PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refr
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
 
 class Alerting(threading.Thread):
-  FNULL = open(os.devnull, 'w')
   @staticmethod
   def play_mp3(path):
+    FNULL = open(os.devnull, 'w')
     subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero'], stderr=FNULL).wait()
     subprocess.Popen(['mpg123', '-q', path]).wait()
 
   @staticmethod
   def play_speach(message):
+    FNULL = open(os.devnull, 'w')
     tmpFile = '/tmp/gpsData.wav'
     subprocess.Popen(['pico2wave', '-l', 'fr-FR', '-w', tmpFile, message]).wait()
     subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero'], stderr=FNULL).wait()
-    subprocess.Popen(['aplay', tmpFile]).wait()
+    subprocess.Popen(['aplay', tmpFile], stderr=FNULL).wait()
     os.remove(tmpFile)
 
   def __init__(self):
