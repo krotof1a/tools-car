@@ -36,12 +36,14 @@ currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 =
 class Alerting(threading.Thread):
   @staticmethod
   def play_mp3(path):
+    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait
     subprocess.Popen(['mpg123', '-q', path]).wait()
 
   @staticmethod
   def play_speach(message):
     tmpFile = '/tmp/gpsData.wav'
-    subprocess.Popen(['pico2wave', '-l', 'fr-FR', '-w', tmpFile, 'info '+message]).wait()
+    subprocess.Popen(['pico2wave', '-l', 'fr-FR', '-w', tmpFile, message]).wait()
+    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait
     subprocess.Popen(['aplay', tmpFile]).wait()
     os.remove(tmpFile)
 
