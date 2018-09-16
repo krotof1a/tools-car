@@ -13,7 +13,7 @@ import subprocess
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
 ALERTREFRESH=2  # Refresh rate of alerting in seconds
-DBFILE = '/home/chip/tools-car/database.zip' # Renamed from rad_txt-iGO-EUR.zip'
+DBFILE  = '/home/chip/tools-car/database.zip' # Renamed from rad_txt-iGO-EUR.zip'
 POIFILE = 'SpeedCam.txt'
 STARTMP3 = '/home/chip/tools-car/Start.mp3'
 ENDMP3   = '/home/chip/tools-car/End.mp3'
@@ -36,14 +36,14 @@ currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 =
 class Alerting(threading.Thread):
   @staticmethod
   def play_mp3(path):
-    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait
+    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait()
     subprocess.Popen(['mpg123', '-q', path]).wait()
 
   @staticmethod
   def play_speach(message):
     tmpFile = '/tmp/gpsData.wav'
     subprocess.Popen(['pico2wave', '-l', 'fr-FR', '-w', tmpFile, message]).wait()
-    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait
+    subprocess.Popen(['aplay', '-d', '1', '-r', '48000', '-f', 'S16_LE', '/dev/zero']).wait()
     subprocess.Popen(['aplay', tmpFile]).wait()
     os.remove(tmpFile)
 
@@ -52,7 +52,7 @@ class Alerting(threading.Thread):
     threading.Thread.__init__(self)
     self.current_value = None
     self.play_mp3(STARTMP3)
-    self.play_speach(str(len(poi))+' radars')
+    self.play_speach('Chargement de '+str(len(poi))+' radars')
     self.running = True #setting the thread running to true
  
   def run(self):
