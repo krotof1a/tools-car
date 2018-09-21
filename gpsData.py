@@ -8,8 +8,10 @@ import time
 import threading
 import zipfile
 import subprocess
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 
 #setting the constants
+DEBUGPORT=8080  # Debug http server port
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
 ALERTREFRESH=2  # Refresh rate of alerting in seconds
@@ -28,10 +30,36 @@ POSIMPRECISION = 0.05 # Imprecision in real precise position
 #setting the global variables
 averageSpeedValue = 0
 gpsd = None 
+webServer = None
 poi  = []
 proxyPoi = []
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
+
+class httpHandler(BaseHTTPRequestHandler):	
+	#Handler for the GET requests
+	def do_GET(self):
+		self.send_response(200)
+		self.send_header('Content-type','text/html')
+		self.end_headers()
+		# Send the html message
+		self.wfile.write("Hello World !")
+		return
+
+class httpServer(threading.Thread):
+  def __init__(self):
+    threading.Thread.__init__(self)
+    self.current_value = None
+    self.running = True #setting the thread running to true
+
+  def run(self):
+        global webServer
+	#Create a web server and define the handler to manage the
+	#incoming request
+	webServer = HTTPServer(('', DEBUGPORT), httpHandler)
+	
+	#Wait forever for incoming htto requests
+	webServer.serve_forever()
 
 class Alerting(threading.Thread):
   @staticmethod
@@ -128,6 +156,7 @@ if __name__ == '__main__':
   gpsp = GpsPoller()
   poip = ProxyPOISelector()
   alert = Alerting()
+  http = httpServer()
   # Start everything
   averageControlProxy = False
   averageMeasureNbr = 0
@@ -135,6 +164,7 @@ if __name__ == '__main__':
     gpsp.start()
     poip.start()
     alert.start()
+    http.start()
 
     while True:
       os.system('clear')
@@ -220,9 +250,11 @@ if __name__ == '__main__':
     gpsp.running  = False
     poip.running  = False
     alert.running = False
+    http.running  = False
     gpsp.join() # wait for the thread to finish what it's doing
     poip.join()
     alert.join()
+    webServer.shutdown()
     time.sleep(1)
   print "Done.\nExiting."
 
