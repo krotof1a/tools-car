@@ -28,38 +28,53 @@ WARNINGDISTANCEMULTIPLICATOROVER   = 5 # Multiplicator of warning distance for o
 POSIMPRECISION = 0.05 # Imprecision in real precise position
 
 #setting the global variables
+currentDebugBody = ""
 averageSpeedValue = 0
 gpsd = None 
-webServer = None
 poi  = []
 proxyPoi = []
+proxyPoiInvalidate = False
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
+htmlPageReady = False
 
-class httpHandler(BaseHTTPRequestHandler):	
-	#Handler for the GET requests
+class httpHandler(BaseHTTPRequestHandler):
+	global htmlPageReady	
+	HEAD="<head><META HTTP-EQUIV='refresh' CONTENT='"+str(MAINREFRESH)+"'><title>gpsData debug page</title></head>"
+
 	def do_GET(self):
+		global currentDebugBody
 		self.send_response(200)
 		self.send_header('Content-type','text/html')
 		self.end_headers()
 		# Send the html message
-		self.wfile.write("Hello World !")
+		if htmlPageReady:
+			self.wfile.write("<html>"+self.HEAD+"<body>"+currentDebugBody+"</body></html>")
 		return
 
+	def log_message(self, format, *args):
+        	return
+
 class httpServer(threading.Thread):
+  webServer=None
+  
   def __init__(self):
     threading.Thread.__init__(self)
     self.current_value = None
     self.running = True #setting the thread running to true
 
+  def kill(self):
+	print 'Stop webserver'
+	self.webServer.shutdown()	
+
   def run(self):
-        global webServer
 	#Create a web server and define the handler to manage the
+	print 'Start webserver'
 	#incoming request
-	webServer = HTTPServer(('', DEBUGPORT), httpHandler)
+	self.webServer = HTTPServer(('', DEBUGPORT), httpHandler)
 	
 	#Wait forever for incoming htto requests
-	webServer.serve_forever()
+	self.webServer.serve_forever()
 
 class Alerting(threading.Thread):
   @staticmethod
@@ -95,7 +110,7 @@ class Alerting(threading.Thread):
 		self.play_mp3(STRONGMP3)
 		time.sleep(ALERTREFRESH)
 	elif currentMode == 4:
-		play.speach('note Vitesse moyenne '+str(averageSpeedValue))
+		play.speach('Vitesse moyenne '+str(averageSpeedValue))
 		time.sleep(ALERTREFRESH*5)
 	else:	
 		time.sleep(ALERTREFRESH)
@@ -120,13 +135,14 @@ class ProxyPOISelector(threading.Thread):
     self.running = True #setting the thread running to true
  
   def run(self):
-    global gpsd, poi, proxyPoi, PROXYREFRESH, PROXYDISTANCE, currentMode
+    global gpsd, poi, proxyPoi, proxyPoiInvalidate, PROXYREFRESH, PROXYDISTANCE, currentMode
     while self.running:
 		if not currentMode == 0:
 			if len(poi) > 0:
 				print 'Start proximity radar selection'
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				proxyPoi = []
+				proxyPoiInvalidate=True
 				for counter, radar in enumerate(poi):
 					radarPos = (float(radar[1]), float(radar[0]))
 					radarDis = haversine(localPos,radarPos)
@@ -167,17 +183,17 @@ if __name__ == '__main__':
     http.start()
 
     while True:
-      os.system('clear')
-      print
-      print ' GPS reading'
-      print '----------------------------------------'
-      print 'latitude     ' , gpsd.fix.latitude
-      print 'longitude    ' , gpsd.fix.longitude
-      print 'speed (km/h) ' , gpsd.fix.speed*3.6
-      print 'track        ' , gpsd.fix.track
-      print
-      print 'Records in DB: '+str(len(poi))
-      print 'Current mode : ',str(currentMode)
+      htmlPageReady = False
+      currentDebugBody=' GPS reading<br/>'
+      currentDebugBody+='----------------------------------------<br/>'      
+      currentDebugBody+='latitude     '+str(gpsd.fix.latitude)+'<br/>'
+      currentDebugBody+='longitude    '+str(gpsd.fix.longitude)+'<br/>'
+      currentDebugBody+='speed (km/h) '+str(gpsd.fix.speed*3.6)+'<br/>'
+      currentDebugBody+='track        '+str(gpsd.fix.track)+'<br/>'
+      currentDebugBody+='----------------------------------------<br/>'      
+      currentDebugBody+='Records in DB: '+str(len(poi))+'<br/>'
+      currentDebugBody+='Current mode : '+str(currentMode)+'<br/>'
+      currentDebugBody+='----------------------------------------<br/>'      
 
       if not (gpsd.fix.latitude == 0 and gpsd.fix.longitude == 0):
 	currentMode=1
@@ -194,41 +210,45 @@ if __name__ == '__main__':
         # Check proximity radars to know if we should warn
 	updateStatus=0
         for counter, radar in enumerate(proxyPoi):
-      	        print 'Proximity radar '+str(counter)
+      	        currentDebugBody+='Proximity radar '+str(counter)+'<br/>'
 		radarPos = (float(radar[1]), float(radar[0]))
 		radarDis = haversine(localPos,radarPos)
 		if radarDis <= radar[6] + POSIMPRECISION: # Getting closer from the radar
 		   if radarDis <= WARNINGDISTANCE: # We are under warning distance
 			if radar[2] == '1' or radar[2] == '4' or radar[2] == '69': # Warn only for RF, RS and RFR
-				print str(radar)
+				currentDebugBody+=str(radar)+'<br/>'
 				lowlim = (float(radar[5])-45)%360
 				hghlim = (float(radar[5])+45)%360
 				if radar[4] == '0' or (radar[4] == '1' and gpsd.fix.track > lowlim and gpsd.fix.track < hghlim) or radar[4] == '2':
 				   if not currentMode==4:
 					if (not float(radar[3])==0) and (gpsd.fix.speed*3.6)>radar[3]:
-						print '- WARNING'
+						currentDebugBody+='- WARNING<br/>'
 						currentMode=3
 						updateStatus=1
 					else:
-						print '- LIGHT WARNING'
+						currentDebugBody+='- LIGHT WARNING<br/>'
 						currentMode=2
 						updateStatus=1
 					if radarDis <= POSIMPRECISION:
 						averageControlProxy = True
 				   else:
-					print '- IN CONTROLLED SECTION'
+					currentDebugBody+='- IN CONTROLLED SECTION<br/>'
 					updateStatus=1
 				else:
-					print '- Radar is not in the driving direction'
+					currentDebugBody+='- Radar is not in the driving direction<br/>'
 			else:
-				print '- Radar is not a RF, RS or RFR  one'
+				currentDebugBody+='- Radar is not a RF, RS or RFR  one<br/>'
 		   else:
-			print '- Radar is too far'
+			currentDebugBody+='- Radar is too far<br/>'
 		else:
 		   print '- Radar distance is increasing'
 		   if (radar[2] == '4' and (currentMode==3 or currentMode==2) and averageControlProxy==True):
 			currentMode=4
 			updateStatus=1
+		# Check if proxyPoi is valid
+		if proxyPoiInvalidate:
+			proxyPoiInvalidate=False
+			break
 		# update of radar distance
 		proxyPoi[counter]=(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis)
 	# update status
@@ -243,6 +263,7 @@ if __name__ == '__main__':
 		averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
       else:
 	currentMode=0
+      htmlPageReady = True
       time.sleep(MAINREFRESH)
  
   except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
@@ -254,7 +275,7 @@ if __name__ == '__main__':
     gpsp.join() # wait for the thread to finish what it's doing
     poip.join()
     alert.join()
-    webServer.shutdown()
+    http.kill()
     time.sleep(1)
   print "Done.\nExiting."
 
