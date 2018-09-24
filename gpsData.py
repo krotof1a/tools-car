@@ -174,7 +174,6 @@ if __name__ == '__main__':
   alert = Alerting()
   http = httpServer()
   # Start everything
-  averageControlProxy = False
   averageMeasureNbr = 0
   try:
     gpsp.start()
@@ -229,10 +228,13 @@ if __name__ == '__main__':
 						currentDebugBody+='- LIGHT WARNING<br/>'
 						currentMode=2
 						updateStatus=1
-					if radarDis <= POSIMPRECISION:
-						averageControlProxy = True
+					if radar[2] == '4' and radarDis <= POSIMPRECISION:
+						currentMode=4
 				   else:
 					currentDebugBody+='- IN CONTROLLED SECTION<br/>'
+					if radar[2] == '4' and radarDis <= POSIMPRECISION:
+						#TODO: Add a check to verify that is not the same than the entering one
+						currentMode=2
 					updateStatus=1
 				else:
 					currentDebugBody+='- Radar is not in the driving direction<br/>'
@@ -242,8 +244,7 @@ if __name__ == '__main__':
 			currentDebugBody+='- Radar is too far<br/>'
 		else:
 		   print '- Radar distance is increasing'
-		   if (radar[2] == '4' and (currentMode==3 or currentMode==2) and averageControlProxy==True):
-			currentMode=4
+		   if (radar[2] == '4' and currentMode==4):
 			updateStatus=1
 		# Check if proxyPoi is valid
 		if proxyPoiInvalidate:
@@ -256,7 +257,6 @@ if __name__ == '__main__':
 		currentMode=1
 		averageSpeedValue = 0
   		averageMeasureNbr = 0
-		averageControlProxy = False
 	# calculate average speed
 	if currentMode == 4:
 		averageMeasureNbr += 1
