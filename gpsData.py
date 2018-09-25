@@ -30,6 +30,8 @@ POSIMPRECISION = 0.05 # Imprecision in real precise position
 #setting the global variables
 currentDebugBody = ""
 averageSpeedValue = 0
+averageMeasureNbr = 0
+entryRSZoneHash = None
 gpsd = None 
 poi  = []
 proxyPoi = []
@@ -174,7 +176,6 @@ if __name__ == '__main__':
   alert = Alerting()
   http = httpServer()
   # Start everything
-  averageMeasureNbr = 0
   try:
     gpsp.start()
     poip.start()
@@ -230,11 +231,13 @@ if __name__ == '__main__':
 						updateStatus=1
 					if radar[2] == '4' and radarDis <= POSIMPRECISION:
 						currentMode=4
+						entryRSZoneHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
 				   else:
 					currentDebugBody+='- IN CONTROLLED SECTION<br/>'
-					if radar[2] == '4' and radarDis <= POSIMPRECISION:
-						#TODO: Add a check to verify that is not the same than the entering one
+					radarHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
+					if radar[2] == '4' and radarDis <= POSIMPRECISION and not radarHash == entryRSZoneHash:
 						currentMode=2
+						entryRSZoneHash=None
 					updateStatus=1
 				else:
 					currentDebugBody+='- Radar is not in the driving direction<br/>'
