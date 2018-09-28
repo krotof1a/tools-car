@@ -38,11 +38,11 @@ proxyPoi = []
 proxyPoiInvalidate = False
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
-htmlPageReady = False
+htmlPageReady = threading.Lock()
 
 class httpHandler(BaseHTTPRequestHandler):
 	global htmlPageReady	
-	HEAD="<head><META HTTP-EQUIV='refresh' CONTENT='"+str(MAINREFRESH)+"'><title>gpsData debug page</title></head>"
+	HEAD="<head><META HTTP-EQUIV='refresh' CONTENT='"+str(MAINREFRESH*2)+"'><title>gpsData debug page</title></head>"
 
 	def do_GET(self):
 		global currentDebugBody
@@ -50,8 +50,9 @@ class httpHandler(BaseHTTPRequestHandler):
 		self.send_header('Content-type','text/html')
 		self.end_headers()
 		# Send the html message
-		if htmlPageReady:
-			self.wfile.write("<html>"+self.HEAD+"<body>"+currentDebugBody+"</body></html>")
+		htmlPageReady.acquire()
+		self.wfile.write("<html>"+self.HEAD+"<body>"+currentDebugBody+"</body></html>")
+		htmlPageReady.release()
 		return
 
 	def log_message(self, format, *args):
@@ -107,7 +108,7 @@ class Alerting(threading.Thread):
     while self.running:
 	if currentMode == 2:
 		self.play_mp3(LIGHTMP3)
-		time.sleep(ALERTREFRESH)
+		time.sleep(ALERTREFRESH*3)
 	elif currentMode == 3:	
 		self.play_mp3(STRONGMP3)
 		time.sleep(ALERTREFRESH)
@@ -183,7 +184,7 @@ if __name__ == '__main__':
     http.start()
 
     while True:
-      htmlPageReady = False
+      htmlPageReady.acquire()
       currentDebugBody=' GPS reading<br/>'
       currentDebugBody+='----------------------------------------<br/>'      
       currentDebugBody+='latitude     '+str(gpsd.fix.latitude)+'<br/>'
@@ -266,7 +267,7 @@ if __name__ == '__main__':
 		averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
       else:
 	currentMode=0
-      htmlPageReady = True
+      htmlPageReady.release()
       time.sleep(MAINREFRESH)
  
   except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
