@@ -11,7 +11,7 @@ ExecStart=/usr/bin/python /home/chip/tools-car/gpsData.py
 WorkingDirectory=/home/chip/tools-car
 StandardOutput=null
 StandardError=null
-Restart=on-abort
+Restart=always
  
 [Install]
 WantedBy=multi-user.target
