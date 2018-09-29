@@ -177,6 +177,7 @@ if __name__ == '__main__':
   alert = Alerting()
   http = httpServer()
   # Start everything
+  watchdog = MAINREFRESH*10
   try:
     gpsp.start()
     poip.start()
@@ -184,6 +185,11 @@ if __name__ == '__main__':
     http.start()
 
     while True:
+      if watchdog > 0:
+	watchdog-=1
+      elif watchdog == 0 and currentMode == 0:
+	print 'Watchdog found current mode is still 0'
+	raise(KeyboardInterrupt)
       htmlPageReady.acquire()
       currentDebugBody=' GPS reading<br/>'
       currentDebugBody+='----------------------------------------<br/>'      
