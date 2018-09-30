@@ -173,6 +173,7 @@ if __name__ == '__main__':
 	   	 poi.insert(0,(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5]))
   # Create helper's threads
   gpsp = GpsPoller()
+  gpsp.daemon=True
   poip = ProxyPOISelector()
   alert = Alerting()
   http = httpServer()
@@ -277,14 +278,17 @@ if __name__ == '__main__':
       time.sleep(MAINREFRESH)
  
   except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
-    print "\nKilling Threads..."
     gpsp.running  = False
     poip.running  = False
     alert.running = False
     http.running  = False
-    gpsp.join() # wait for the thread to finish what it's doing
+    print "\nKilling Threads..."
+    gpsp.join(timeout=5) # wait for the thread to finish what it's doing
+    print "Gps thread killed."
     poip.join()
+    print "Proxy POI thread killed."
     alert.join()
+    print "Alerting thread killed."
     http.kill()
     time.sleep(1)
   print "Done.\nExiting."
