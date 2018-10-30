@@ -219,7 +219,7 @@ if __name__ == '__main__':
         # Check proximity radars to know if we should warn
 	updateStatus=0
 	proxyPoiReady.acquire()
-        for counter, radar in enumerate(proxyPoi):
+	for counter, radar in enumerate(proxyPoi):
       	        currentDebugBody+='Proximity radar '+str(counter)+'<br/>'
 		radarPos = (float(radar[1]), float(radar[0]))
 		radarDis = haversine(localPos,radarPos)
