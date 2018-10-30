@@ -21,10 +21,13 @@ STARTMP3 = '/home/chip/tools-car/Start.mp3'
 ENDMP3   = '/home/chip/tools-car/End.mp3'
 LIGHTMP3 = '/home/chip/tools-car/Lightbell.mp3'
 STRONGMP3= '/home/chip/tools-car/Strongbell.mp3'
-WARNINGDISTANCEREF = 0.4 # Ref warning distance in km for low speed (under 60km/h)
-WARNINGDISTANCEMULTIPLICATORMEDIUM = 2 # Multiplicator of warning distance for medium speed (under 90km/h)
-WARNINGDISTANCEMULTIPLICATORHIGH   = 3 # Multiplicator of warning distance for high  speed (under 130km/h)
-WARNINGDISTANCEMULTIPLICATOROVER   = 5 # Multiplicator of warning distance for over  speed (above 130km/h)
+SPEEDREF = 60    # Low speed
+SPEEDMEDIUM = 90 # Medium speed
+SPEEDHIGH = 130  # High speed
+WARNINGDISTANCEREF = 0.4 # Ref warning distance in km for low speed (under SPEEDREF km/h)
+WARNINGDISTANCEMULTIPLICATORMEDIUM = 2 # Multiplicator of warning distance for medium speed (under SPEEDMEDIUM km/h)
+WARNINGDISTANCEMULTIPLICATORHIGH   = 3 # Multiplicator of warning distance for high  speed (under SPEEDHIGH km/h)
+WARNINGDISTANCEMULTIPLICATOROVER   = 5 # Multiplicator of warning distance for over  speed (above SPEEDHIGH km/h)
 POSIMPRECISION = 0.05 # Imprecision in real precise position
 
 #setting the global variables
@@ -140,8 +143,7 @@ class ProxyPOISelector(threading.Thread):
   def run(self):
     global gpsd, poi, proxyPoi, proxyPoiInvalidate, PROXYREFRESH, PROXYDISTANCE, currentMode
     while self.running:
-		if not currentMode == 0:
-			if len(poi) > 0:
+		if currentMode != 0 and len(poi) > 0:
 				print 'Start proximity radar selection'
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				proxyPoi = []
@@ -157,8 +159,6 @@ class ProxyPOISelector(threading.Thread):
 						time.sleep(1)
 					else:
 						break
-			else:
-				time.sleep(1)
 		else:
 			time.sleep(1)
 
@@ -207,11 +207,11 @@ if __name__ == '__main__':
 	currentMode=1
         localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
         # Set warning distance according to current speed
-        if gpsd.fix.speed*3.6 <= 60:
+        if gpsd.fix.speed*3.6 <= SPEEDREF:
 		WARNINGDISTANCE=WARNINGDISTANCEREF
-        elif gpsd.fix.speed*3.6 <= 90:
+        elif gpsd.fix.speed*3.6 <= SPEEDMEDIUM:
 		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATORMEDIUM
-        elif gpsd.fix.speed*3.6 <= 130:
+        elif gpsd.fix.speed*3.6 <= SPEEDHIGH:
 		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATORHIGH
         else:
 		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATOROVER
