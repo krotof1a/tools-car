@@ -38,10 +38,10 @@ entryRSZoneHash = None
 gpsd = None 
 poi  = []
 proxyPoi = []
-proxyPoiInvalidate = False
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
 htmlPageReady = threading.Lock()
+proxyPoiReady = threading.Lock()
 
 class httpHandler(BaseHTTPRequestHandler):
 	global htmlPageReady	
@@ -141,19 +141,20 @@ class ProxyPOISelector(threading.Thread):
     self.running = True #setting the thread running to true
  
   def run(self):
-    global gpsd, poi, proxyPoi, proxyPoiInvalidate, PROXYREFRESH, PROXYDISTANCE, currentMode
+    global gpsd, poi, proxyPoi, PROXYREFRESH, PROXYDISTANCE, currentMode
     while self.running:
 		if currentMode != 0 and len(poi) > 0:
 				print 'Start proximity radar selection'
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				proxyPoi = []
-				proxyPoiInvalidate=True
+				proxyPoiReady.acquire()
 				for counter, radar in enumerate(poi):
 					radarPos = (float(radar[1]), float(radar[0]))
 					radarDis = haversine(localPos,radarPos)
 					if radarDis <= PROXYDISTANCE:
 						proxyPoi.insert(0,(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis))
 				print 'End proximity radar selection'
+				proxyPoiReady.release()
 				for i in range(PROXYREFRESH): # Used to wait but not blocking for Thread termination
 					if self.running:
 						time.sleep(1)
@@ -217,6 +218,7 @@ if __name__ == '__main__':
 		WARNINGDISTANCE=WARNINGDISTANCEREF*WARNINGDISTANCEMULTIPLICATOROVER
         # Check proximity radars to know if we should warn
 	updateStatus=0
+	proxyPoiReady.acquire()
         for counter, radar in enumerate(proxyPoi):
       	        currentDebugBody+='Proximity radar '+str(counter)+'<br/>'
 		radarPos = (float(radar[1]), float(radar[0]))
@@ -257,12 +259,9 @@ if __name__ == '__main__':
 		   print '- Radar distance is increasing'
 		   if (radar[2] == '4' and currentMode==4):
 			updateStatus=1
-		# Check if proxyPoi is valid
-		if proxyPoiInvalidate:
-			proxyPoiInvalidate=False
-			break
 		# update of radar distance
 		proxyPoi[counter]=(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis)
+	proxyPoiReady.release()
 	# update status
 	if updateStatus==0 and currentMode>1:
 		currentMode=1
