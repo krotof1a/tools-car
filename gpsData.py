@@ -59,7 +59,7 @@ class httpHandler(BaseHTTPRequestHandler):
 		return
 
 	def log_message(self, format, *args):
-        return
+        	return
 
 class httpServer(threading.Thread):
 	webServer=None
@@ -135,7 +135,7 @@ class GpsPoller(threading.Thread):
 		while self.running:
 			gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
  
- class ProxyPOISelector(threading.Thread):
+class ProxyPOISelector(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.running = True #setting the thread running to true
@@ -168,10 +168,10 @@ if __name__ == '__main__':
 	zipFile = zipfile.ZipFile(DBFILE, 'r')
 	with zipFile.open(POIFILE) as f:
 		for line in f:
-           radar = line.strip('\n').strip('\r').split(",")
-		# Format is X,Y,TYPE,SPEED,DIRTYPE,DIRECTION
-		if not radar[0]=='X': # discard header of file
-			poi.insert(0,(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5]))
+			radar = line.strip('\n').strip('\r').split(",")
+			# Format is X,Y,TYPE,SPEED,DIRTYPE,DIRECTION
+			if not radar[0]=='X': # discard header of file
+				poi.insert(0,(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5]))
 	# Create helper's threads
 	gpsp = GpsPoller()
 	gpsp.daemon=True
@@ -256,7 +256,7 @@ if __name__ == '__main__':
 						else:
 							currentDebugBody+='- Radar is too far<br/>'
 					else:
-						print '- Radar distance is increasing'
+						currentDebugBody+='- Radar distance is increasing<br/>'
 						if (radar[2] == '4' and currentMode==4):
 							updateStatus=1
 					# update of radar distance
