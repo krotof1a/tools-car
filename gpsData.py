@@ -204,7 +204,7 @@ if __name__ == '__main__':
 			currentDebugBody+='Current mode : '+str(currentMode)+'<br/>'
 			currentDebugBody+='----------------------------------------<br/>'      
 			
-			if not (gpsd.fix.latitude == 0 and gpsd.fix.longitude == 0):
+			if not (gpsd.fix.mode > 1 and gpsd.fix.latitude == 0 and gpsd.fix.longitude == 0):
 				currentMode=1
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				# Set warning distance according to current speed
@@ -272,6 +272,8 @@ if __name__ == '__main__':
 					averageMeasureNbr += 1
 					averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
 			else:
+				if currentMode > 0:
+					watchdog = MAINREFRESH*10
 				currentMode=0
 			htmlPageReady.release()
 			time.sleep(MAINREFRESH)
