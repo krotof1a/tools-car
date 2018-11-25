@@ -1,0 +1,11 @@
+[Unit]
+Description=Shutdown auto when low battery
+After=multi-user.target network-online.target
+ 
+[Service]
+Type=simple
+ExecStart=/home/chip/tools-car/scripts/lowBatShutdown.sh
+WorkingDirectory=/home/chip/
+ 
+[Install]
+WantedBy=multi-user.target
