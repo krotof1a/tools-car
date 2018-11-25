@@ -1,5 +1,5 @@
 # tools-car
-
+- sudo nmtui (Activate...)
 - sudo apt-get update
 - sudo apt-get install libttspico-utils gpsd python-gps mpg123 git-core
 - sudo nano /etc/default/gpsd  (DEVICE="/dev/ttyACM0")
