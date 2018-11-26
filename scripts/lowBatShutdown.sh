@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sleep 120
+sleep 60
 
 while true
 do
