@@ -103,7 +103,7 @@ class Alerting(threading.Thread):
 		threading.Thread.__init__(self)
 		self.current_value = None
 		self.play_mp3(STARTMP3)
-		self.play_speach('Chargement de '+str(len(poi))+' radars')
+		self.play_speach('Import de '+str(len(poi))+' radars')
 		self.running = True #setting the thread running to true
 
 	def run(self):
@@ -239,9 +239,9 @@ if __name__ == '__main__':
 											currentDebugBody+='- LIGHT WARNING<br/>'
 											currentMode=2
 											updateStatus=1
-										if radar[2] == '4' and radarDis <= POSIMPRECISION:
-											currentMode=4
-											entryRSZoneHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
+										#if radar[2] == '4' and radarDis <= POSIMPRECISION:
+										#	currentMode=4
+										#	entryRSZoneHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
 									else:
 										currentDebugBody+='- IN CONTROLLED SECTION<br/>'
 										radarHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
