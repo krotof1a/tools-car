@@ -11,6 +11,7 @@ import subprocess
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 
 #setting the constants
+VERSION='Version un point un. '
 DEBUGPORT=8080  # Debug http server port
 MAINREFRESH=1   # Refresh rate of proximity radars analysis in seconds
 PROXYREFRESH=60 # Refresh rate of the proximity list of POI is seconds
@@ -40,6 +41,7 @@ poi  = []
 proxyPoi = []
 PROXYDISTANCE=3*PROXYREFRESH/60 # Max distance covered at 180km/h between 2 refreshes
 currentMode = 0 # 0 = no GPS, 1 = GPS, 2 = light warning, 3 = heavy warning, 4 = in limited section
+currentModeReady = threading.Lock()
 htmlPageReady = threading.Lock()
 proxyPoiReady = threading.Lock()
 
@@ -59,7 +61,7 @@ class httpHandler(BaseHTTPRequestHandler):
 		return
 
 	def log_message(self, format, *args):
-        	return
+		return
 
 class httpServer(threading.Thread):
 	webServer=None
@@ -103,22 +105,25 @@ class Alerting(threading.Thread):
 		threading.Thread.__init__(self)
 		self.current_value = None
 		self.play_mp3(STARTMP3)
-		self.play_speach('Import de '+str(len(poi))+' radars')
+		self.play_speach(VERSION+str(len(poi))+' radars')
 		self.running = True #setting the thread running to true
 
 	def run(self):
 		global currentMode, averageSpeedValue
 		while self.running:
-			if currentMode == 2:
+			currentModeReady.acquire()
+			alertMode=currentMode
+			currentModeReady.release()
+			if alertMode == 2:
 				self.play_mp3(LIGHTMP3)
 				time.sleep(ALERTREFRESH*3)
-			elif currentMode == 3:	
+			elif alertMode == 3:
 				self.play_mp3(STRONGMP3)
 				time.sleep(ALERTREFRESH)
-			elif currentMode == 4:
+			elif alertMode == 4:
 				play.speach('Vitesse moyenne '+str(averageSpeedValue))
 				time.sleep(ALERTREFRESH*5)
-			else:	
+			else:
 				time.sleep(ALERTREFRESH)
 		self.play_mp3(ENDMP3) # Only reached when the thread is terminated
 
@@ -143,7 +148,10 @@ class ProxyPOISelector(threading.Thread):
 	def run(self):
 		global gpsd, poi, proxyPoi, PROXYREFRESH, PROXYDISTANCE, currentMode
 		while self.running:
-			if currentMode != 0 and len(poi) > 0:
+			currentModeReady.acquire()
+			alertMode=currentMode
+			currentModeReady.release()
+			if alertMode != 0 and len(poi) > 0:
 				print 'Start proximity radar selection'
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				proxyPoi = []
@@ -185,11 +193,14 @@ if __name__ == '__main__':
 		poip.start()
 		alert.start()
 		http.start()
-	
+
 		while True:
+			currentModeReady.acquire()
+			alertMode=currentMode
+			currentModeReady.release()
 			if watchdog > 0:
 				watchdog-=1
-			elif watchdog == 0 and currentMode == 0:
+			elif watchdog == 0 and alertMode == 0:
 				print 'Watchdog found current mode is still 0'
 				raise(KeyboardInterrupt)
 			htmlPageReady.acquire()
@@ -201,11 +212,13 @@ if __name__ == '__main__':
 			currentDebugBody+='track        '+str(gpsd.fix.track)+'<br/>'
 			currentDebugBody+='----------------------------------------<br/>'      
 			currentDebugBody+='Records in DB: '+str(len(poi))+'<br/>'
-			currentDebugBody+='Current mode : '+str(currentMode)+'<br/>'
+			currentDebugBody+='Current mode : '+str(alertMode)+'<br/>'
 			currentDebugBody+='----------------------------------------<br/>'      
 			
 			if not (gpsd.fix.mode == 1 or (gpsd.fix.latitude == 0 and gpsd.fix.longitude == 0)):
+				currentModeReady.acquire()
 				currentMode=1
+				currentModeReady.release()
 				localPos = (gpsd.fix.latitude, gpsd.fix.longitude)
 				# Set warning distance according to current speed
 				if gpsd.fix.speed*3.6 <= SPEEDREF:
@@ -229,26 +242,29 @@ if __name__ == '__main__':
 								currentDebugBody+=str(radar)+'<br/>'
 								lowlim = (float(radar[5])-45)%360
 								hghlim = (float(radar[5])+45)%360
-								if radar[4] == '0' or (radar[4] == '1' and gpsd.fix.track > lowlim and gpsd.fix.track < hghlim) or radar[4] == '2':
-									if not currentMode==4:
+								if radar[4] == '0' or (radar[4] == '1' and gpsd.fix.track > lowlim and gpsd.fix.track < hghlim) or radar[4] == '2': # Good driving direction
+									#if not currentMode==4:
 										if (not float(radar[3])==0) and (gpsd.fix.speed*3.6)>radar[3]:
 											currentDebugBody+='- WARNING<br/>'
+											currentModeReady.acquire()
 											currentMode=3
-											updateStatus=1
+											currentModeReady.release()
 										else:
 											currentDebugBody+='- LIGHT WARNING<br/>'
+											currentModeReady.acquire()
 											currentMode=2
-											updateStatus=1
+											currentModeReady.release()
+										updateStatus=1
 										#if radar[2] == '4' and radarDis <= POSIMPRECISION:
 										#	currentMode=4
 										#	entryRSZoneHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
-									else:
-										currentDebugBody+='- IN CONTROLLED SECTION<br/>'
-										radarHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
-										if radar[2] == '4' and radarDis <= POSIMPRECISION and not radarHash == entryRSZoneHash:
-											currentMode=2
-											entryRSZoneHash=None
-										updateStatus=1
+									#else:
+									#	currentDebugBody+='- IN CONTROLLED SECTION<br/>'
+									#	radarHash = str(radar[0])+str(radar[1])+str(radar[2])+str(radar[3])+str(radar[4])+str(radar[5])
+									#	if radar[2] == '4' and radarDis <= POSIMPRECISION and not radarHash == entryRSZoneHash:
+									#		currentMode=2
+									#		entryRSZoneHash=None
+									#	updateStatus=1
 								else:
 									currentDebugBody+='- Radar is not in the driving direction<br/>'
 							else:
@@ -257,24 +273,28 @@ if __name__ == '__main__':
 							currentDebugBody+='- Radar is too far<br/>'
 					else:
 						currentDebugBody+='- Radar distance is increasing<br/>'
-						if (radar[2] == '4' and currentMode==4):
+						if (radar[2] == '4' and alertMode==4):
 							updateStatus=1
 					# update of radar distance
 					proxyPoi[counter]=(radar[0], radar[1], radar[2], radar[3], radar[4], radar[5], radarDis)
 				proxyPoiReady.release()
 				# update status
-				if updateStatus==0 and currentMode>1:
-					currentMode=1
+				if updateStatus==0 and alertMode>1:
+					currentModeReady.acquire()
+					currentMode = 1
+					currentModeReady.release()
 					averageSpeedValue = 0
 					averageMeasureNbr = 0
 				# calculate average speed
-				if currentMode == 4:
-					averageMeasureNbr += 1
-					averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
+				#if currentMode == 4:
+				#	averageMeasureNbr += 1
+				#	averageSpeedValue = (averageSpeedValue*(averageMeasureNbr-1)+gpsd.fix.speed*3.6)/averageMeasureNbr
 			else:
-				if currentMode > 0:
+				if alertMode > 0:
 					watchdog = MAINREFRESH*10
+				currentModeReady.acquire()
 				currentMode=0
+				currentModeReady.release()
 			htmlPageReady.release()
 			time.sleep(MAINREFRESH)
  
